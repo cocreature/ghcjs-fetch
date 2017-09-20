@@ -1,22 +1,32 @@
 {-# LANGUAGE JavaScriptFFI #-}
 {-# LANGUAGE OverloadedStrings #-}
-import GHCJS.Fetch
-import Test.Hspec.Core.Runner (Config(..), hspecWith, defaultConfig, ColorMode(..))
-import Test.Hspec
-import Test.QuickCheck
-import Control.Exception (finally)
-import GHCJS.Marshal
-import GHCJS.Types
-import Data.Aeson (Value)
+
+import           Control.Exception (finally)
+import           Data.Aeson (Value(..))
+import qualified Data.HashMap.Lazy as HashMap
+import           GHCJS.Fetch
+import           GHCJS.Marshal
+import           GHCJS.Types
+import           Test.Hspec
+import           Test.Hspec.Core.Runner (Config(..), hspecWith, defaultConfig, ColorMode(..))
+import           Test.QuickCheck
 
 main :: IO ()
 main = do
-  flip finally seleniumAsync $ hspecWith defaultConfig { configColorMode = ColorNever } $ do
-    describe "fetch" $ do
-      it "can GET" $ do
-        resp <- fetch (Request "https://httpbin.org/get" RequestOptions)
-        val <- responseJSON resp
-        print (val :: Maybe Value)
+  flip finally seleniumAsync $
+    hspecWith defaultConfig {configColorMode = ColorNever} $ do
+      describe "fetch" $ do
+        it "can GET" $ do
+          resp <- fetch (Request "https://httpbin.org/get" RequestOptions)
+          val <- responseJSON resp
+          case val of
+            Just (Object obj) ->
+              HashMap.lookup "url" obj `shouldBe`
+              Just (String "https://httpbin.org/get")
+            _ -> expectationFailure ("Expected Object but got: " ++ show val)
+        it "should throw on nonexisting URL" $
+          fetch (Request "https://example.com" RequestOptions) `shouldThrow`
+          (\(PromiseException _) -> True)
 
 foreign import javascript safe "window.seleniumCallback();"
                seleniumAsync :: IO ()
