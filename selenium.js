@@ -33,9 +33,10 @@ fs.readFile(
       driver.manage().logs().get("browser").then(function(entries) {
         const logRegex = /^console-api \d+:\d+ "(.*)"$/;
         entries.forEach(entry => {
-          process.stdout.write(
-            entry.message.match(logRegex)[1].replace("\\n", "\n")
-          );
+          const arr = entry.message.match(logRegex);
+          if (arr) {
+            process.stdout.write(arr[1].replace("\\n", "\n"));
+          }
         });
       });
     });
