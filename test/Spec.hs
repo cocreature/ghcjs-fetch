@@ -17,7 +17,7 @@ main = do
     hspecWith defaultConfig {configColorMode = ColorNever} $ do
       describe "fetch" $ do
         it "can GET" $ do
-          resp <- fetch (Request "https://httpbin.org/get" RequestOptions)
+          resp <- fetch (Request "https://httpbin.org/get" defaultRequestOptions)
           val <- responseJSON resp
           case val of
             Just (Object obj) ->
@@ -25,7 +25,7 @@ main = do
               Just (String "https://httpbin.org/get")
             _ -> expectationFailure ("Expected Object but got: " ++ show val)
         it "should throw on nonexisting URL" $
-          fetch (Request "https://example.com" RequestOptions) `shouldThrow`
+          fetch (Request "https://example.com" defaultRequestOptions) `shouldThrow`
           (\(PromiseException _) -> True)
 
 foreign import javascript safe "window.seleniumCallback();"

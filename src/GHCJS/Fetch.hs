@@ -1,18 +1,22 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE JavaScriptFFI #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module GHCJS.Fetch
   ( fetch
   , responseJSON
   , Request(..)
   , RequestOptions(..)
+  , defaultRequestOptions
   , Response(..)
   , PromiseException(..)
   ) where
 
+import qualified Data.ByteString.Char8 as Char8
 import           Control.Exception
 import           Data.Aeson hiding (Object)
+import qualified Data.JSString as JSString
 import           Data.Typeable
 import           GHCJS.Foreign.Callback
 import           GHCJS.Marshal
@@ -20,6 +24,7 @@ import           GHCJS.Types
 import           JavaScript.Object (setProp, getProp)
 import qualified JavaScript.Object as Object
 import           JavaScript.Object.Internal (Object(..))
+import           Network.HTTP.Types
 import           System.IO.Unsafe
 
 data TypeError
@@ -64,12 +69,28 @@ data Integrity =
 -- signal and observe have not been standarized
 
 data RequestOptions = RequestOptions
-  deriving (Show, Eq, Ord)
+  { reqOptMethod :: !Method
+  } deriving (Show, Eq, Ord)
 
 data Request = Request
   { requestUrl :: !JSString
   , requestOptions :: !RequestOptions
   }
+
+defaultRequestOptions :: RequestOptions
+defaultRequestOptions = RequestOptions {reqOptMethod = methodGet}
+
+instance ToJSVal RequestOptions where
+  toJSVal (RequestOptions { reqOptMethod }) = do
+    init <- Object.create
+    -- TODO verify that this can only be an ASCII string
+    setProp "method" ((jsval . JSString.pack . Char8.unpack) reqOptMethod) init
+    return (jsval init)
+
+toJSRequest :: Request -> IO JSRequest
+toJSRequest (Request url opts) = do
+  opts' <- toJSVal opts
+  js_newRequest url opts'
 
 instance Show PromiseException where
   show _ = "PromiseException"
@@ -85,10 +106,8 @@ newtype Response = Response JSVal
 
 -- | Throws 'PromiseException' when the request fails
 fetch :: Request -> IO Response
-fetch (Request url _) = do
-  reqOpts <- Object.create
-  req <- js_newRequest url reqOpts
-  Response <$> (await =<< js_fetch req)
+fetch req = do
+  Response <$> (await =<< js_fetch =<< toJSRequest req)
 
 responseJSON :: Response -> IO (Maybe Value)
 responseJSON resp =
@@ -97,7 +116,7 @@ responseJSON resp =
 newtype JSRequest = JSRequest JSVal
 
 foreign import javascript safe "new Request($1)" js_newRequest ::
-               JSString -> Object -> IO JSRequest
+               JSString -> JSVal -> IO JSRequest
 
 newtype Promise a = Promise JSVal
 
