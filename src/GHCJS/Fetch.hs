@@ -6,6 +6,7 @@
 module GHCJS.Fetch
   ( fetch
   , responseJSON
+  , responseText
   , Request(..)
   , RequestOptions(..)
   , defaultRequestOptions
@@ -113,9 +114,13 @@ responseJSON :: Response -> IO (Maybe Value)
 responseJSON resp =
   fromJSVal =<< await =<< js_responseJSON resp
 
+responseText :: Response -> IO JSString
+responseText resp =
+  fromJSValUnchecked =<< await =<< js_responseText resp
+
 newtype JSRequest = JSRequest JSVal
 
-foreign import javascript safe "new Request($1)" js_newRequest ::
+foreign import javascript safe "new Request($1, $2)" js_newRequest ::
                JSString -> JSVal -> IO JSRequest
 
 newtype Promise a = Promise JSVal
@@ -139,3 +144,9 @@ foreign import javascript safe "fetch($1)" js_fetch ::
 
 foreign import javascript safe "$1.json()" js_responseJSON ::
                Response -> IO (Promise JSVal)
+
+foreign import javascript safe "$1.text()" js_responseText ::
+               Response -> IO (Promise JSString)
+
+foreign import javascript safe "console.log(JSON.stringify($1));" consoleLog ::
+  JSVal -> IO ()

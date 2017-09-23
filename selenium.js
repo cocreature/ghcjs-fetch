@@ -17,8 +17,6 @@ const driver = new webdriver.Builder()
   .setLoggingPrefs(loggingPrefs)
   .build();
 
-driver.get("http://www.google.com");
-
 fs.readFile(
   "dist-newstyle/build/x86_64-linux/ghcjs-0.2.1/ghcjs-fetch-0.1.0.0/c/ghcjs-fetch-test/noopt/build/ghcjs-fetch-test/ghcjs-fetch-test.jsexe/all.js",
   "utf8",
@@ -35,7 +33,11 @@ fs.readFile(
         entries.forEach(entry => {
           const arr = entry.message.match(logRegex);
           if (arr) {
-            process.stdout.write(arr[1].replace("\\n", "\n"));
+            process.stdout.write(
+              arr[1].replace("\\n", "\n").replace('\\"', '"')
+            );
+          } else {
+            // process.stdout.write(entry.message);
           }
         });
       });
