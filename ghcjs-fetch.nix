@@ -1,5 +1,6 @@
 { mkDerivation, aeson, base, bytestring, ghcjs-base, hspec
-, hspec-core, http-types, QuickCheck, stdenv, unordered-containers
+, hspec-core, http-types, QuickCheck, stdenv, text
+, unordered-containers
 }:
 mkDerivation {
   pname = "ghcjs-fetch";
@@ -9,7 +10,7 @@ mkDerivation {
     aeson base bytestring ghcjs-base http-types
   ];
   testHaskellDepends = [
-    aeson base ghcjs-base hspec hspec-core QuickCheck
+    aeson base ghcjs-base hspec hspec-core http-types QuickCheck text
     unordered-containers
   ];
   homepage = "https://github.com/cocreature/ghcjs-fetch#readme";

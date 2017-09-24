@@ -35,6 +35,7 @@ test-suite ghcjs-fetch-test
                      , hspec-core
                      , http-types
                      , QuickCheck
+                     , text
                      , unordered-containers
   default-language:    Haskell2010
 

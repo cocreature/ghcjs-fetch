@@ -14,9 +14,10 @@ module GHCJS.Fetch
   , PromiseException(..)
   ) where
 
-import qualified Data.ByteString.Char8 as Char8
 import           Control.Exception
 import           Data.Aeson hiding (Object)
+import qualified Data.ByteString.Char8 as Char8
+import           Data.Foldable
 import qualified Data.JSString as JSString
 import           Data.Typeable
 import           GHCJS.Foreign.Callback
@@ -30,7 +31,8 @@ import           System.IO.Unsafe
 
 data RequestOptions = RequestOptions
   { reqOptMethod :: !Method
-  } deriving (Show, Eq, Ord)
+  , reqOptBody :: !(Maybe JSVal)
+  }
 
 data Request = Request
   { requestUrl :: !JSString
@@ -38,14 +40,16 @@ data Request = Request
   }
 
 defaultRequestOptions :: RequestOptions
-defaultRequestOptions = RequestOptions {reqOptMethod = methodGet}
+defaultRequestOptions =
+  RequestOptions {reqOptMethod = methodGet, reqOptBody = Nothing}
 
 instance ToJSVal RequestOptions where
-  toJSVal (RequestOptions { reqOptMethod }) = do
-    init <- Object.create
+  toJSVal (RequestOptions { reqOptMethod, reqOptBody }) = do
+    obj <- Object.create
     -- TODO verify that this can only be an ASCII string
-    setProp "method" ((jsval . JSString.pack . Char8.unpack) reqOptMethod) init
-    return (jsval init)
+    setProp "method" ((jsval . JSString.pack . Char8.unpack) reqOptMethod) obj
+    traverse_ (\body -> setProp "body" body obj) reqOptBody
+    return (jsval obj)
 
 toJSRequest :: Request -> IO JSRequest
 toJSRequest (Request url opts) = do

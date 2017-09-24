@@ -5,6 +5,7 @@ import           Control.Exception (catch, finally)
 import           Data.Aeson (Value(..))
 import qualified Data.HashMap.Lazy as HashMap
 import qualified Data.JSString as JSString
+import           Data.Text (Text)
 import           GHCJS.Fetch
 import           GHCJS.Marshal
 import           GHCJS.Types
@@ -40,20 +41,39 @@ main = do
               , "<h1>Method Not Allowed</h1>"
               , "<p>The method is not allowed for the requested URL.</p>"
               ]
-        it "can POST" $
-          (do resp <-
-                fetch
-                  (Request
-                     "https://httpbin.org/post"
-                     defaultRequestOptions {reqOptMethod = methodPost})
-              val <- responseJSON resp
-              case val of
-                Just (Object obj) ->
-                  HashMap.lookup "url" obj `shouldBe`
-                  Just (String "https://httpbin.org/post")
-                _ ->
-                  expectationFailure ("Expected Object but got: " ++ show val)) `catch`
-          (\(PromiseException val) -> consoleLog val)
+        it "can POST" $ do
+          resp <-
+            fetch
+              (Request
+                 "https://httpbin.org/post"
+                 defaultRequestOptions {reqOptMethod = methodPost})
+          val <- responseJSON resp
+          case val of
+            Just (Object obj) ->
+              HashMap.lookup "url" obj `shouldBe`
+              Just (String "https://httpbin.org/post")
+            _ -> expectationFailure ("Expected Object but got: " ++ show val)
+        it "can POST text/plain" $ do
+          resp <-
+            fetch
+              (Request
+                 "https://httpbin.org/post"
+                 defaultRequestOptions
+                 { reqOptMethod = methodPost
+                 , reqOptBody = Just (jsval ("my-text" :: JSString))
+                 })
+          val <- responseJSON resp
+          case val of
+            Just (Object obj) -> do
+              (lookupKey "Content-Type" =<< HashMap.lookup "headers" obj) `shouldBe`
+                Just (String "text/plain;charset=UTF-8")
+              HashMap.lookup "data" obj `shouldBe` Just (String "my-text")
+            Nothing ->
+              expectationFailure ("Expected Object but got: " ++ show val)
+
+lookupKey :: Text -> Value -> Maybe Value
+lookupKey k (Object obj) = HashMap.lookup k obj
+lookupKey _ _ = Nothing
 
 foreign import javascript safe "console.log($1);"
   consoleLog :: JSVal -> IO ()
