@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Exception (catch, finally)
-import           Data.Aeson (Value(..))
+import           Data.Aeson (Value(..), Object)
 import qualified Data.HashMap.Lazy as HashMap
 import qualified Data.JSString as JSString
 import           Data.Text (Text)
@@ -23,11 +23,9 @@ main = do
           resp <-
             fetch (Request "https://httpbin.org/get" defaultRequestOptions)
           val <- responseJSON resp
-          case val of
-            Just (Object obj) ->
-              HashMap.lookup "url" obj `shouldBe`
-              Just (String "https://httpbin.org/get")
-            _ -> expectationFailure ("Expected Object but got: " ++ show val)
+          withObject val $ \obj ->
+            HashMap.lookup "url" obj `shouldBe`
+            Just (String "https://httpbin.org/get")
         it "should throw on nonexisting URL" $
           fetch (Request "https://nonexistent.AA" defaultRequestOptions) `shouldThrow`
           (\(PromiseException _) -> True)
@@ -48,11 +46,9 @@ main = do
                  "https://httpbin.org/post"
                  defaultRequestOptions {reqOptMethod = methodPost})
           val <- responseJSON resp
-          case val of
-            Just (Object obj) ->
-              HashMap.lookup "url" obj `shouldBe`
-              Just (String "https://httpbin.org/post")
-            _ -> expectationFailure ("Expected Object but got: " ++ show val)
+          withObject val $ \obj ->
+            HashMap.lookup "url" obj `shouldBe`
+            Just (String "https://httpbin.org/post")
         it "can POST text/plain" $ do
           resp <-
             fetch
@@ -63,13 +59,14 @@ main = do
                  , reqOptBody = Just (jsval ("my-text" :: JSString))
                  })
           val <- responseJSON resp
-          case val of
-            Just (Object obj) -> do
-              (lookupKey "Content-Type" =<< HashMap.lookup "headers" obj) `shouldBe`
-                Just (String "text/plain;charset=UTF-8")
-              HashMap.lookup "data" obj `shouldBe` Just (String "my-text")
-            Nothing ->
-              expectationFailure ("Expected Object but got: " ++ show val)
+          withObject val $ \obj -> do
+            (lookupKey "Content-Type" =<< HashMap.lookup "headers" obj) `shouldBe`
+              Just (String "text/plain;charset=UTF-8")
+            HashMap.lookup "data" obj `shouldBe` Just (String "my-text")
+
+withObject :: Maybe Value -> (Object -> Expectation) -> Expectation
+withObject (Just (Object obj)) f = f obj
+withObject val _ = expectationFailure ("Expected Object but got: " ++ show val)
 
 lookupKey :: Text -> Value -> Maybe Value
 lookupKey k (Object obj) = HashMap.lookup k obj
