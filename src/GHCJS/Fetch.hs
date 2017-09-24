@@ -28,47 +28,6 @@ import           JavaScript.Object.Internal (Object(..))
 import           Network.HTTP.Types
 import           System.IO.Unsafe
 
-data TypeError
-
-data USVString
-
-data Mode = Cors | NoCors | SameOrigin
-
-data Credentials
-  = CredOmit
-  | CredSameOrigin
-  | CredInclude
-  -- | FederatedCredential
-  -- | PasswordCredential
-
-data CacheMode
-  = Default
-  | NoStore
-  | Reload
-  | NoCache
-  | ForceCache
-  | OnlyIfCached
-
-data RedirectMode
-  = Follow
-  | Error
-  | Manual
-
-data Referrer =
-  Referrer !JSVal
-
-data ReferrerPolicy
-  = NoReferrer
-  | NoReferrerWhenDownGrade
-  | Origin
-  | OriginWhenCrossOrigin
-  | UnsafeUrl
-
-data Integrity =
-  Integrity !JSVal
-
--- signal and observe have not been standarized
-
 data RequestOptions = RequestOptions
   { reqOptMethod :: !Method
   } deriving (Show, Eq, Ord)
@@ -120,9 +79,6 @@ responseText resp =
 
 newtype JSRequest = JSRequest JSVal
 
-foreign import javascript safe "new Request($1, $2)" js_newRequest ::
-               JSString -> JSVal -> IO JSRequest
-
 newtype Promise a = Promise JSVal
 
 await :: Promise a -> IO JSVal
@@ -134,6 +90,9 @@ await p = do
     else do
       err <- getProp "val" obj
       throwIO (PromiseException err)
+
+foreign import javascript safe "new Request($1, $2)" js_newRequest
+               :: JSString -> JSVal -> IO JSRequest
 
 foreign import javascript interruptible
                "$1.then(function(a) { $c({ 'val': a, 'success': true }); }, function(e) { $c({ 'val': e, 'success': false }); });"
@@ -148,5 +107,5 @@ foreign import javascript safe "$1.json()" js_responseJSON ::
 foreign import javascript safe "$1.text()" js_responseText ::
                Response -> IO (Promise JSString)
 
-foreign import javascript safe "console.log(JSON.stringify($1));" consoleLog ::
-  JSVal -> IO ()
+foreign import javascript safe "console.log(JSON.stringify($1));"
+               consoleLog :: JSVal -> IO ()
