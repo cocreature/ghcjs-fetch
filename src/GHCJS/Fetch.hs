@@ -17,6 +17,7 @@ module GHCJS.Fetch
 import           Control.Exception
 import           Data.Aeson hiding (Object)
 import qualified Data.ByteString.Char8 as Char8
+import           Data.CaseInsensitive as CI
 import           Data.Foldable
 import qualified Data.JSString as JSString
 import           Data.Typeable
@@ -32,24 +33,39 @@ import           System.IO.Unsafe
 data RequestOptions = RequestOptions
   { reqOptMethod :: !Method
   , reqOptBody :: !(Maybe JSVal)
+  , reqOptHeaders :: !RequestHeaders
   }
 
 data Request = Request
-  { requestUrl :: !JSString
-  , requestOptions :: !RequestOptions
+  { reqUrl :: !JSString
+  , reqOptions :: !RequestOptions
   }
 
 defaultRequestOptions :: RequestOptions
 defaultRequestOptions =
-  RequestOptions {reqOptMethod = methodGet, reqOptBody = Nothing}
+  RequestOptions
+  {reqOptMethod = methodGet, reqOptBody = Nothing, reqOptHeaders = []}
+
+requestHeadersJSVal :: RequestHeaders -> IO JSVal
+requestHeadersJSVal headers = do
+  headersObj <- js_newHeaders
+  traverse_
+    (\(name, val) -> do
+       let name' = (JSString.pack . Char8.unpack . CI.original) name
+           val' = (JSString.pack . Char8.unpack) val
+       js_appendHeader headersObj name' val')
+    headers
+  pure (jsval headersObj)
 
 instance ToJSVal RequestOptions where
-  toJSVal (RequestOptions { reqOptMethod, reqOptBody }) = do
+  toJSVal (RequestOptions {reqOptMethod, reqOptBody, reqOptHeaders}) = do
     obj <- Object.create
     -- TODO verify that this can only be an ASCII string
     setProp "method" ((jsval . JSString.pack . Char8.unpack) reqOptMethod) obj
     traverse_ (\body -> setProp "body" body obj) reqOptBody
-    return (jsval obj)
+    headers <- requestHeadersJSVal reqOptHeaders
+    setProp "headers" headers obj
+    pure (jsval obj)
 
 toJSRequest :: Request -> IO JSRequest
 toJSRequest (Request url opts) = do
@@ -95,6 +111,11 @@ await p = do
       err <- getProp "val" obj
       throwIO (PromiseException err)
 
+newtype JSHeaders =
+  JSHeaders JSVal
+
+instance IsJSVal JSHeaders
+
 foreign import javascript safe "new Request($1, $2)" js_newRequest
                :: JSString -> JSVal -> IO JSRequest
 
@@ -113,3 +134,9 @@ foreign import javascript safe "$1.text()" js_responseText ::
 
 foreign import javascript safe "console.log(JSON.stringify($1));"
                consoleLog :: JSVal -> IO ()
+
+foreign import javascript safe "new Headers()" js_newHeaders ::
+               IO JSHeaders
+
+foreign import javascript safe "$1.append($2, $3);" js_appendHeader
+               :: JSHeaders -> JSString -> JSString -> IO ()

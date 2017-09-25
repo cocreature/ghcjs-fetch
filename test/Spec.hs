@@ -63,6 +63,17 @@ main = do
             (lookupKey "Content-Type" =<< HashMap.lookup "headers" obj) `shouldBe`
               Just (String "text/plain;charset=UTF-8")
             HashMap.lookup "data" obj `shouldBe` Just (String "my-text")
+        it "can set HEADERS" $ do
+          resp <-
+            fetch
+              (Request
+                 "https://httpbin.org/get"
+                 defaultRequestOptions
+                 {reqOptHeaders = [("My-Header-Name", "my-header-value")]})
+          val <- responseJSON resp
+          withObject val $ \obj ->
+            (lookupKey "My-Header-Name" =<< HashMap.lookup "headers" obj) `shouldBe`
+            Just (String "my-header-value")
 
 withObject :: Maybe Value -> (Object -> Expectation) -> Expectation
 withObject (Just (Object obj)) f = f obj
@@ -72,7 +83,7 @@ lookupKey :: Text -> Value -> Maybe Value
 lookupKey k (Object obj) = HashMap.lookup k obj
 lookupKey _ _ = Nothing
 
-foreign import javascript safe "console.log($1);"
-  consoleLog :: JSVal -> IO ()
+foreign import javascript safe "console.log($1);" consoleLog ::
+               JSVal -> IO ()
 foreign import javascript safe "window.seleniumCallback();"
                seleniumAsync :: IO ()
