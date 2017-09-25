@@ -60,12 +60,20 @@ requestHeadersJSVal headers = do
 instance ToJSVal RequestOptions where
   toJSVal (RequestOptions {reqOptMethod, reqOptBody, reqOptHeaders}) = do
     obj <- Object.create
-    -- TODO verify that this can only be an ASCII string
-    setProp "method" ((jsval . JSString.pack . Char8.unpack) reqOptMethod) obj
-    traverse_ (\body -> setProp "body" body obj) reqOptBody
-    headers <- requestHeadersJSVal reqOptHeaders
-    setProp "headers" headers obj
+    setBody obj
+    setMethod obj
+    setHeaders obj
     pure (jsval obj)
+    where
+      setMethod obj =
+        setProp
+          "method"
+          ((jsval . JSString.pack . Char8.unpack) reqOptMethod)
+          obj
+      setBody obj = traverse_ (\body -> setProp "body" body obj) reqOptBody
+      setHeaders obj = do
+        headers' <- requestHeadersJSVal reqOptHeaders
+        setProp "headers" headers' obj
 
 toJSRequest :: Request -> IO JSRequest
 toJSRequest (Request url opts) = do
