@@ -44,12 +44,22 @@ data RequestCredentials
   | CredInclude
   deriving (Show, Eq, Ord)
 
+data RequestCacheMode
+  = CacheDefault
+  | NoStore
+  | Reload
+  | NoCache
+  | ForceCache
+  | OnlyIfCached
+  deriving (Show, Eq, Ord)
+
 data RequestOptions = RequestOptions
   { reqOptMethod :: !Method
   , reqOptHeaders :: !RequestHeaders
   , reqOptBody :: !(Maybe JSVal)
   , reqOptMode :: !RequestMode
   , reqOptCredentials :: !RequestCredentials
+  , reqOptCacheMode :: !RequestCacheMode
   }
 
 data Request = Request
@@ -65,6 +75,7 @@ defaultRequestOptions =
   , reqOptBody = Nothing
   , reqOptMode = Cors
   , reqOptCredentials = CredOmit
+  , reqOptCacheMode = CacheDefault
   }
 
 requestHeadersJSVal :: RequestHeaders -> IO JSVal
@@ -99,12 +110,26 @@ instance PToJSVal RequestCredentials where
 instance ToJSVal RequestCredentials where
   toJSVal = pure . pToJSVal
 
+instance PToJSVal RequestCacheMode where
+  pToJSVal cacheMode =
+    case cacheMode of
+      CacheDefault -> jsval ("default" :: JSString)
+      NoStore -> jsval ("no-store" :: JSString)
+      Reload -> jsval ("reload" :: JSString)
+      NoCache -> jsval ("no-cache" :: JSString)
+      ForceCache -> jsval ("force-cache" :: JSString)
+      OnlyIfCached -> jsval ("only-if-cached" :: JSString)
+
+instance ToJSVal RequestCacheMode where
+  toJSVal = pure . pToJSVal
+
 instance ToJSVal RequestOptions where
   toJSVal (RequestOptions { reqOptMethod
                           , reqOptBody
                           , reqOptHeaders
                           , reqOptMode
                           , reqOptCredentials
+                          , reqOptCacheMode
                           }) = do
     obj <- Object.create
     setMethod obj
@@ -112,6 +137,7 @@ instance ToJSVal RequestOptions where
     setBody obj
     setMode obj
     setCredentials obj
+    setCacheMode obj
     pure (jsval obj)
     where
       setMethod obj =
@@ -123,12 +149,10 @@ instance ToJSVal RequestOptions where
       setHeaders obj = do
         headers <- requestHeadersJSVal reqOptHeaders
         setProp "headers" headers obj
-      setMode obj = do
-        mode <- toJSVal reqOptMode
-        setProp "mode" mode obj
-      setCredentials obj = do
-        creds <- toJSVal reqOptCredentials
-        setProp "credentials" creds obj
+      setMode obj = setProp "mode" (pToJSVal reqOptMode) obj
+      setCredentials obj =
+        setProp "credentials" (pToJSVal reqOptCredentials) obj
+      setCacheMode obj = setProp "cache-mode" (pToJSVal reqOptCacheMode) obj
 
 toJSRequest :: Request -> IO JSRequest
 toJSRequest (Request url opts) = do
