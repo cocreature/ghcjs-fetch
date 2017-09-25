@@ -4,3 +4,6 @@ cabal.project.local
 node_modules/
 package-lock.json
 .stack-work/
+cabal.sandbox.config
+.cabal-sandbox/
+dist/
