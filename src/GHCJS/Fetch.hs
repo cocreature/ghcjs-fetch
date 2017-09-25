@@ -1,6 +1,6 @@
 {-|
 Module      : GHCJS.Fetch
-Description : GHCJS bindings for the JavaScript fetch API
+Description : GHCJS bindings for the JavaScript Fetch API
 Copyright   : (c) Moritz Kiefer, 2017
 License     : BSD3
 Maintainer  : moritz.kiefer@purelyfunctional.org
@@ -23,7 +23,7 @@ An introduction to the Fetch API can be found at
 {-# LANGUAGE OverloadedStrings #-}
 module GHCJS.Fetch
   (
-  -- * fetch
+  -- * Fetch
     fetch
   -- * Request
   , Request(..)

@@ -1,7 +1,6 @@
 name:                ghcjs-fetch
 version:             0.1.0.0
--- synopsis:
--- description:
+synopsis:            GHCJS bindings for the JavaScript Fetch API
 homepage:            https://github.com/cocreature/ghcjs-fetch#readme
 license:             BSD3
 license-file:        LICENSE
@@ -18,11 +17,11 @@ library
   exposed-modules:     GHCJS.Fetch
                        GHCJS.Fetch.FFI
                        GHCJS.Fetch.Types
-  build-depends:       aeson
-                     , base >= 4.7 && < 5
-                     , bytestring
-                     , case-insensitive
-                     , http-types
+  build-depends:       aeson >= 1.1 && < 1.3
+                     , base >= 4.9 && < 5
+                     , bytestring >= 0.10 && < 0.11
+                     , case-insensitive >= 1.2 && < 1.3
+                     , http-types >= 0.9 && < 0.10
   if impl(ghcjs)
     build-depends:     ghcjs-base
   else
@@ -33,16 +32,19 @@ test-suite ghcjs-fetch-test
   hs-source-dirs:      test
   type:                exitcode-stdio-1.0
   main-is:             Spec.hs
-  build-depends:       aeson
-                     , base
-                     , ghcjs-base
-                     , ghcjs-fetch
-                     , hspec
-                     , hspec-core
-                     , http-types
-                     , QuickCheck
-                     , text
-                     , unordered-containers
+  if !impl(ghcjs)
+    buildable: False
+  else
+    build-depends:       aeson
+                       , base
+                       , ghcjs-base >= 0.2 && < 0.3
+                       , ghcjs-fetch
+                       , hspec >= 2.4 && < 2.5
+                       , hspec-core >= 2.4 && < 2.5
+                       , http-types
+                       , QuickCheck >= 2.9 && < 2.11
+                       , text >= 1.2 && < 1.3
+                       , unordered-containers >= 0.2 && < 0.3
   default-language:    Haskell2010
 
 source-repository head
