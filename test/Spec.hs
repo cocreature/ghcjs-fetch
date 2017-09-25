@@ -75,6 +75,8 @@ main = do
             (lookupKey "My-Header-Name" =<< HashMap.lookup "headers" obj) `shouldBe`
             Just (String "my-header-value")
 
+-- TODO Add tests for setting request modes
+
 withObject :: Maybe Value -> (Object -> Expectation) -> Expectation
 withObject (Just (Object obj)) f = f obj
 withObject val _ = expectationFailure ("Expected Object but got: " ++ show val)

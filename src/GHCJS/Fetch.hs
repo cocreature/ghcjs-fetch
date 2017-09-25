@@ -23,6 +23,7 @@ import qualified Data.JSString as JSString
 import           Data.Typeable
 import           GHCJS.Foreign.Callback
 import           GHCJS.Marshal
+import           GHCJS.Marshal.Pure
 import           GHCJS.Types
 import           JavaScript.Object (setProp, getProp)
 import qualified JavaScript.Object as Object
@@ -30,10 +31,17 @@ import           JavaScript.Object.Internal (Object(..))
 import           Network.HTTP.Types
 import           System.IO.Unsafe
 
+data RequestMode
+  = Cors
+  | NoCors
+  | SameOrigin
+  | Navigate
+
 data RequestOptions = RequestOptions
   { reqOptMethod :: !Method
   , reqOptBody :: !(Maybe JSVal)
   , reqOptHeaders :: !RequestHeaders
+  , reqOptMode :: !RequestMode
   }
 
 data Request = Request
@@ -44,7 +52,11 @@ data Request = Request
 defaultRequestOptions :: RequestOptions
 defaultRequestOptions =
   RequestOptions
-  {reqOptMethod = methodGet, reqOptBody = Nothing, reqOptHeaders = []}
+  { reqOptMethod = methodGet
+  , reqOptBody = Nothing
+  , reqOptHeaders = []
+  , reqOptMode = Cors
+  }
 
 requestHeadersJSVal :: RequestHeaders -> IO JSVal
 requestHeadersJSVal headers = do
@@ -57,12 +69,24 @@ requestHeadersJSVal headers = do
     headers
   pure (jsval headersObj)
 
+instance PToJSVal RequestMode where
+  pToJSVal mode =
+    case mode of
+      Cors -> jsval ("cors" :: JSString)
+      NoCors -> jsval ("no-cors" :: JSString)
+      SameOrigin -> jsval ("same-origin" :: JSString)
+      Navigate -> jsval ("navigate" :: JSString)
+
+instance ToJSVal RequestMode where
+  toJSVal = pure . pToJSVal
+
 instance ToJSVal RequestOptions where
-  toJSVal (RequestOptions {reqOptMethod, reqOptBody, reqOptHeaders}) = do
+  toJSVal (RequestOptions {reqOptMethod, reqOptBody, reqOptHeaders, reqOptMode}) = do
     obj <- Object.create
     setBody obj
     setMethod obj
     setHeaders obj
+    setMode obj
     pure (jsval obj)
     where
       setMethod obj =
@@ -72,8 +96,11 @@ instance ToJSVal RequestOptions where
           obj
       setBody obj = traverse_ (\body -> setProp "body" body obj) reqOptBody
       setHeaders obj = do
-        headers' <- requestHeadersJSVal reqOptHeaders
-        setProp "headers" headers' obj
+        headers <- requestHeadersJSVal reqOptHeaders
+        setProp "headers" headers obj
+      setMode obj = do
+        mode <- toJSVal reqOptMode
+        setProp "mode" mode obj
 
 toJSRequest :: Request -> IO JSRequest
 toJSRequest (Request url opts) = do
