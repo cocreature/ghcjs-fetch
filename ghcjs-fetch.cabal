@@ -16,12 +16,17 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     GHCJS.Fetch
+                       GHCJS.Fetch.FFI
+                       GHCJS.Fetch.Types
   build-depends:       aeson
                      , base >= 4.7 && < 5
                      , bytestring
                      , case-insensitive
-                     , ghcjs-base
                      , http-types
+  if impl(ghcjs)
+    build-depends:     ghcjs-base
+  else
+    build-depends:     ghcjs-base-stub
   default-language:    Haskell2010
 
 test-suite ghcjs-fetch-test

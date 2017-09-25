@@ -28,7 +28,7 @@ main = do
             Just (String "https://httpbin.org/get")
         it "should throw on nonexisting URL" $
           fetch (Request "https://nonexistent.AA" defaultRequestOptions) `shouldThrow`
-          (\(PromiseException _) -> True)
+          (\(JSPromiseException _) -> True)
         it "can’t POST using GET" $ do
           resp <-
             fetch (Request "https://httpbin.org/post" defaultRequestOptions)
