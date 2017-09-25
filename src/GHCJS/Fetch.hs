@@ -59,6 +59,12 @@ data RequestRedirectMode
   | Manual
   deriving (Show, Eq, Ord)
 
+data RequestReferrer
+  = NoReferrer
+  | Client
+  | ReferrerUrl !JSString
+  deriving (Show, Eq, Ord)
+
 data RequestOptions = RequestOptions
   { reqOptMethod :: !Method
   , reqOptHeaders :: !RequestHeaders
@@ -67,6 +73,7 @@ data RequestOptions = RequestOptions
   , reqOptCredentials :: !RequestCredentials
   , reqOptCacheMode :: !RequestCacheMode
   , reqOptRedirectMode :: !RequestRedirectMode
+  , reqOptReferrer :: !RequestReferrer
   }
 
 data Request = Request
@@ -84,6 +91,7 @@ defaultRequestOptions =
   , reqOptCredentials = CredOmit
   , reqOptCacheMode = CacheDefault
   , reqOptRedirectMode = Follow
+  , reqOptReferrer = Client
   }
 
 requestHeadersJSVal :: RequestHeaders -> IO JSVal
@@ -141,6 +149,16 @@ instance PToJSVal RequestRedirectMode where
 instance ToJSVal RequestRedirectMode where
   toJSVal = pure . pToJSVal
 
+instance PToJSVal RequestReferrer where
+  pToJSVal referrer =
+    case referrer of
+      NoReferrer -> jsval ("no-referrer" :: JSString)
+      Client -> jsval ("about:client" :: JSString)
+      ReferrerUrl url -> jsval url
+
+instance ToJSVal RequestReferrer where
+  toJSVal = pure . pToJSVal
+
 instance ToJSVal RequestOptions where
   toJSVal (RequestOptions { reqOptMethod
                           , reqOptBody
@@ -149,6 +167,7 @@ instance ToJSVal RequestOptions where
                           , reqOptCredentials
                           , reqOptCacheMode
                           , reqOptRedirectMode
+                          , reqOptReferrer
                           }) = do
     obj <- Object.create
     setMethod obj
@@ -158,6 +177,7 @@ instance ToJSVal RequestOptions where
     setCredentials obj
     setCacheMode obj
     setRedirectMode obj
+    setReferrer obj
     pure (jsval obj)
     where
       setMethod obj =
@@ -174,6 +194,7 @@ instance ToJSVal RequestOptions where
         setProp "credentials" (pToJSVal reqOptCredentials) obj
       setCacheMode obj = setProp "cache-mode" (pToJSVal reqOptCacheMode) obj
       setRedirectMode obj = setProp "redirect" (pToJSVal reqOptRedirectMode) obj
+      setReferrer obj = setProp "referrer" (pToJSVal reqOptReferrer) obj
 
 toJSRequest :: Request -> IO JSRequest
 toJSRequest (Request url opts) = do
