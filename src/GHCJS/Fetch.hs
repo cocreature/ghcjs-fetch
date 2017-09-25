@@ -36,12 +36,20 @@ data RequestMode
   | NoCors
   | SameOrigin
   | Navigate
+  deriving (Show, Eq, Ord)
+
+data RequestCredentials
+  = CredOmit
+  | CredSameOrigin
+  | CredInclude
+  deriving (Show, Eq, Ord)
 
 data RequestOptions = RequestOptions
   { reqOptMethod :: !Method
-  , reqOptBody :: !(Maybe JSVal)
   , reqOptHeaders :: !RequestHeaders
+  , reqOptBody :: !(Maybe JSVal)
   , reqOptMode :: !RequestMode
+  , reqOptCredentials :: !RequestCredentials
   }
 
 data Request = Request
@@ -53,9 +61,10 @@ defaultRequestOptions :: RequestOptions
 defaultRequestOptions =
   RequestOptions
   { reqOptMethod = methodGet
-  , reqOptBody = Nothing
   , reqOptHeaders = []
+  , reqOptBody = Nothing
   , reqOptMode = Cors
+  , reqOptCredentials = CredOmit
   }
 
 requestHeadersJSVal :: RequestHeaders -> IO JSVal
@@ -80,13 +89,29 @@ instance PToJSVal RequestMode where
 instance ToJSVal RequestMode where
   toJSVal = pure . pToJSVal
 
+instance PToJSVal RequestCredentials where
+  pToJSVal cred =
+    case cred of
+      CredOmit -> jsval ("omit" :: JSString)
+      CredSameOrigin -> jsval ("same-origin" :: JSString)
+      CredInclude -> jsval ("include" :: JSString)
+
+instance ToJSVal RequestCredentials where
+  toJSVal = pure . pToJSVal
+
 instance ToJSVal RequestOptions where
-  toJSVal (RequestOptions {reqOptMethod, reqOptBody, reqOptHeaders, reqOptMode}) = do
+  toJSVal (RequestOptions { reqOptMethod
+                          , reqOptBody
+                          , reqOptHeaders
+                          , reqOptMode
+                          , reqOptCredentials
+                          }) = do
     obj <- Object.create
-    setBody obj
     setMethod obj
     setHeaders obj
+    setBody obj
     setMode obj
+    setCredentials obj
     pure (jsval obj)
     where
       setMethod obj =
@@ -101,6 +126,9 @@ instance ToJSVal RequestOptions where
       setMode obj = do
         mode <- toJSVal reqOptMode
         setProp "mode" mode obj
+      setCredentials obj = do
+        creds <- toJSVal reqOptCredentials
+        setProp "credentials" creds obj
 
 toJSRequest :: Request -> IO JSRequest
 toJSRequest (Request url opts) = do
