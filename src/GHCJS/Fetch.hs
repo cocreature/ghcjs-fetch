@@ -15,7 +15,7 @@ module GHCJS.Fetch
   ) where
 
 import           Control.Exception
-import           Data.Aeson hiding (Object)
+import           Data.Aeson (Value(..))
 import qualified Data.ByteString.Char8 as Char8
 import           Data.CaseInsensitive as CI
 import           Data.Foldable
@@ -53,6 +53,12 @@ data RequestCacheMode
   | OnlyIfCached
   deriving (Show, Eq, Ord)
 
+data RequestRedirectMode
+  = Follow
+  | Error
+  | Manual
+  deriving (Show, Eq, Ord)
+
 data RequestOptions = RequestOptions
   { reqOptMethod :: !Method
   , reqOptHeaders :: !RequestHeaders
@@ -60,6 +66,7 @@ data RequestOptions = RequestOptions
   , reqOptMode :: !RequestMode
   , reqOptCredentials :: !RequestCredentials
   , reqOptCacheMode :: !RequestCacheMode
+  , reqOptRedirectMode :: !RequestRedirectMode
   }
 
 data Request = Request
@@ -76,6 +83,7 @@ defaultRequestOptions =
   , reqOptMode = Cors
   , reqOptCredentials = CredOmit
   , reqOptCacheMode = CacheDefault
+  , reqOptRedirectMode = Follow
   }
 
 requestHeadersJSVal :: RequestHeaders -> IO JSVal
@@ -123,6 +131,16 @@ instance PToJSVal RequestCacheMode where
 instance ToJSVal RequestCacheMode where
   toJSVal = pure . pToJSVal
 
+instance PToJSVal RequestRedirectMode where
+  pToJSVal redirectMode =
+    case redirectMode of
+      Follow -> jsval ("follow" :: JSString)
+      Error -> jsval ("error" :: JSString)
+      Manual -> jsval ("manual" :: JSString)
+
+instance ToJSVal RequestRedirectMode where
+  toJSVal = pure . pToJSVal
+
 instance ToJSVal RequestOptions where
   toJSVal (RequestOptions { reqOptMethod
                           , reqOptBody
@@ -130,6 +148,7 @@ instance ToJSVal RequestOptions where
                           , reqOptMode
                           , reqOptCredentials
                           , reqOptCacheMode
+                          , reqOptRedirectMode
                           }) = do
     obj <- Object.create
     setMethod obj
@@ -138,6 +157,7 @@ instance ToJSVal RequestOptions where
     setMode obj
     setCredentials obj
     setCacheMode obj
+    setRedirectMode obj
     pure (jsval obj)
     where
       setMethod obj =
@@ -153,6 +173,7 @@ instance ToJSVal RequestOptions where
       setCredentials obj =
         setProp "credentials" (pToJSVal reqOptCredentials) obj
       setCacheMode obj = setProp "cache-mode" (pToJSVal reqOptCacheMode) obj
+      setRedirectMode obj = setProp "redirect" (pToJSVal reqOptRedirectMode) obj
 
 toJSRequest :: Request -> IO JSRequest
 toJSRequest (Request url opts) = do
