@@ -1,16 +1,43 @@
+{-|
+Module      : GHCJS.Fetch
+Description : GHCJS bindings for the JavaScript fetch API
+Copyright   : (c) Moritz Kiefer, 2017
+License     : BSD3
+Maintainer  : moritz.kiefer@purelyfunctional.org
+Stability   : experimental
+Portability : GHCJS
+
+This module provides bindings for JavaScript’s [Fetch
+API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
+
+The bindings deliberately stay close to the JavaScript API so most
+documentation and tutorials should be easily translatable.
+
+An introduction to the Fetch API can be found at
+<https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch>.
+-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE JavaScriptFFI #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module GHCJS.Fetch
-  ( fetch
-  , responseJSON
-  , responseText
+  (
+  -- * fetch
+    fetch
+  -- * Request
   , Request(..)
   , RequestOptions(..)
   , defaultRequestOptions
-  , JSResponse(..)
+  , RequestMode(..)
+  , RequestCredentials(..)
+  , RequestCacheMode(..)
+  , RequestRedirectMode(..)
+  , RequestReferrer(..)
+  -- * Response
+  , responseJSON
+  , responseText
+  -- * Exceptions
   , JSPromiseException(..)
   ) where
 
@@ -34,6 +61,7 @@ import           System.IO.Unsafe
 import           GHCJS.Fetch.FFI
 import           GHCJS.Fetch.Types
 
+-- | See <https://developer.mozilla.org/en-US/docs/Web/API/Request/mode>.
 data RequestMode
   = Cors
   | NoCors
@@ -41,12 +69,14 @@ data RequestMode
   | Navigate
   deriving (Show, Eq, Ord)
 
+-- | See <https://developer.mozilla.org/en-US/docs/Web/API/Request/credentials>.
 data RequestCredentials
   = CredOmit
   | CredSameOrigin
   | CredInclude
   deriving (Show, Eq, Ord)
 
+-- | See <https://developer.mozilla.org/en-US/docs/Web/API/Request/cache>.
 data RequestCacheMode
   = CacheDefault
   | NoStore
@@ -56,22 +86,25 @@ data RequestCacheMode
   | OnlyIfCached
   deriving (Show, Eq, Ord)
 
+-- | See <https://developer.mozilla.org/en-US/docs/Web/API/Request/redirect>.
 data RequestRedirectMode
   = Follow
   | Error
   | Manual
   deriving (Show, Eq, Ord)
 
+-- | See <https://developer.mozilla.org/en-US/docs/Web/API/Request/referrer>.
 data RequestReferrer
   = NoReferrer
   | Client
   | ReferrerUrl !JSString
   deriving (Show, Eq, Ord)
 
+-- | These options correspond to the @init@ argument to the [Request constructor](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request).
 data RequestOptions = RequestOptions
-  { reqOptMethod :: !Method
-  , reqOptHeaders :: !RequestHeaders
-  , reqOptBody :: !(Maybe JSVal)
+  { reqOptMethod :: !Method -- ^ See <https://developer.mozilla.org/en-US/docs/Web/API/Request/method>.
+  , reqOptHeaders :: !RequestHeaders -- ^ See <https://developer.mozilla.org/en-US/docs/Web/API/Headers>.
+  , reqOptBody :: !(Maybe JSVal) -- ^ Corresponds to the @body@ argument in <https://developer.mozilla.org/en-US/docs/Web/API/Headers>.
   , reqOptMode :: !RequestMode
   , reqOptCredentials :: !RequestCredentials
   , reqOptCacheMode :: !RequestCacheMode
@@ -79,11 +112,14 @@ data RequestOptions = RequestOptions
   , reqOptReferrer :: !RequestReferrer
   }
 
+-- | See <https://developer.mozilla.org/en-US/docs/Web/API/Request>.
 data Request = Request
   { reqUrl :: !JSString
   , reqOptions :: !RequestOptions
   }
 
+-- | Default request options. These correspond to the default options
+-- specified in the fetch standard.
 defaultRequestOptions :: RequestOptions
 defaultRequestOptions =
   RequestOptions
@@ -204,15 +240,21 @@ toJSRequest (Request url opts) = do
   opts' <- toJSVal opts
   js_newRequest url opts'
 
--- | Throws 'JSPromiseException' when the request fails
+-- | Throws 'JSPromiseException' when the request fails.
+-- See <https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch>.
 fetch :: Request -> IO JSResponse
 fetch req = do
   JSResponse <$> (await =<< js_fetch =<< toJSRequest req)
 
-responseJSON :: JSResponse -> IO (Maybe Value)
-responseJSON resp =
-  fromJSVal =<< await =<< js_responseJSON resp
+-- | Throws 'JSPromiseException' when decoding fails.
+--
+-- See <https://developer.mozilla.org/en-US/docs/Web/API/Body/json>.
+responseJSON :: JSResponse -> IO Value
+responseJSON resp = fromJSValUnchecked =<< await =<< js_responseJSON resp
 
+-- | Throws 'JSPromiseException' when decoding fails.
+--
+-- See <https://developer.mozilla.org/en-US/docs/Web/API/Body/text>.
 responseText :: JSResponse -> IO JSString
 responseText resp =
   fromJSValUnchecked =<< await =<< js_responseText resp
