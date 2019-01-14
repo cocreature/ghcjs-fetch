@@ -37,6 +37,9 @@ module GHCJS.Fetch
   -- * Response
   , responseJSON
   , responseText
+  , responseBlob
+  , responseMutableArrayBuffer
+  , responseArrayBuffer
   -- * Exceptions
   , JSPromiseException(..)
   ) where
@@ -57,7 +60,7 @@ import qualified JavaScript.Object as Object
 import           JavaScript.Object.Internal (Object(..))
 import           Network.HTTP.Types
 import           System.IO.Unsafe
-
+import           JavaScript.TypedArray.ArrayBuffer (ArrayBuffer (..),MutableArrayBuffer (..), unsafeFreeze)
 import           GHCJS.Fetch.FFI
 import           GHCJS.Fetch.Types
 
@@ -258,6 +261,18 @@ responseJSON resp = fromJSValUnchecked =<< await =<< js_responseJSON resp
 responseText :: JSResponse -> IO JSString
 responseText resp =
   fromJSValUnchecked =<< await =<< js_responseText resp
+
+responseBlob :: JSResponse -> IO JSVal
+responseBlob resp =
+  fromJSValUnchecked =<< await =<< js_responseBlob resp
+ 
+responseMutableArrayBuffer :: JSResponse -> IO MutableArrayBuffer
+responseMutableArrayBuffer resp =
+  pFromJSVal <$> (await =<< js_responseMutableArrayBuffer resp)
+
+responseArrayBuffer :: JSResponse -> IO ArrayBuffer
+responseArrayBuffer resp =
+  unsafeFreeze =<< responseMutableArrayBuffer resp
 
 await :: JSPromise a -> IO JSVal
 await p = do
