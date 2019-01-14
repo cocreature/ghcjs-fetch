@@ -19,7 +19,7 @@ library
                        GHCJS.Fetch.FFI
                        GHCJS.Fetch.Types
                        GHCJS.Fetch.ByteString
-  build-depends:       aeson >= 1.1 && <= 1.4
+  build-depends:       aeson >= 1.1 && <= 1.5
                      , base >= 4.9 && < 5
                      , bytestring >= 0.10 && < 0.11
                      , case-insensitive >= 1.2 && < 1.3
