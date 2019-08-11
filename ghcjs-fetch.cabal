@@ -18,7 +18,7 @@ library
   exposed-modules:     GHCJS.Fetch
                        GHCJS.Fetch.FFI
                        GHCJS.Fetch.Types
-  build-depends:       aeson >= 1.1 && < 1.3
+  build-depends:       aeson >= 1.1
                      , base >= 4.9 && < 5
                      , bytestring >= 0.10 && < 0.11
                      , case-insensitive >= 1.2 && < 1.3
